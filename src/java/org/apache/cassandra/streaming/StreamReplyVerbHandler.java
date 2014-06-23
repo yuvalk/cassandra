@@ -20,6 +20,9 @@ package org.apache.cassandra.streaming;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import org.apache.cassandra.net.IVerbHandler;
 import org.apache.cassandra.net.MessageIn;
 
@@ -42,11 +45,19 @@ public class StreamReplyVerbHandler implements IVerbHandler<StreamReply>
         {
             case FILE_FINISHED:
                 logger.info("Successfully sent {} to {}", reply.file, message.from);
-                session.validateCurrentFile(reply.file);
+		if (java.io.File.separatorChar == '/') {
+                	session.validateCurrentFile(reply.file.replaceAll(Pattern.quote("\\"),Matcher.quoteReplacement("/")));
+		} else {
+	                session.validateCurrentFile(reply.file.replaceAll(Pattern.quote("/"),Matcher.quoteReplacement("\\")));
+		}
                 session.startNext();
                 break;
             case FILE_RETRY:
-                session.validateCurrentFile(reply.file);
+		if (java.io.File.separatorChar == '/') {
+                	session.validateCurrentFile(reply.file.replaceAll(Pattern.quote("\\"),Matcher.quoteReplacement("/")));
+		} else {
+	                session.validateCurrentFile(reply.file.replaceAll(Pattern.quote("/"),Matcher.quoteReplacement("\\")));
+		}
                 logger.info("Need to re-stream file {} to {}", reply.file, message.from);
                 session.retry();
                 break;

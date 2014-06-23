@@ -18,6 +18,8 @@
 package org.apache.cassandra.streaming;
 
 import java.io.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,7 +38,6 @@ import org.apache.cassandra.utils.Pair;
 public class PendingFile
 {
     public static final PendingFileSerializer serializer = new PendingFileSerializer();
-
     // NB: this reference is used to be able to release the acquired reference upon completion
     public final SSTableReader sstable;
 
@@ -128,11 +129,12 @@ public class PendingFile
                 return;
             }
 
-            dos.writeUTF(sc.desc.filenameFor(sc.component));
+            dos.writeUTF(sc.desc.filenameFor(sc.component).replaceAll(Pattern.quote("/"),Matcher.quoteReplacement("\\")));
             dos.writeUTF(sc.component);
             dos.writeInt(sc.sections.size());
             for (Pair<Long,Long> section : sc.sections)
             {
+
                 dos.writeLong(section.left);
                 dos.writeLong(section.right);
             }
@@ -148,7 +150,7 @@ public class PendingFile
             if (filename.isEmpty())
                 return null;
 
-            Descriptor desc = Descriptor.fromFilename(filename);
+            Descriptor desc = Descriptor.fromFilename(filename.replaceAll(Pattern.quote("\\"),Matcher.quoteReplacement("/")));
             String component = dis.readUTF();
             int count = dis.readInt();
             List<Pair<Long,Long>> sections = new ArrayList<Pair<Long,Long>>(count);
