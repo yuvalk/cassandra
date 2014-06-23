@@ -35,6 +35,7 @@ import javax.management.NotificationBroadcasterSupport;
 import javax.management.ObjectName;
 
 import com.google.common.collect.*;
+import com.google.common.util.concurrent.AtomicDouble;
 import org.apache.log4j.Level;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -90,6 +91,8 @@ public class StorageService extends NotificationBroadcasterSupport implements IE
 
     /* JMX notification serial number counter */
     private final AtomicLong notificationSerialNumber = new AtomicLong();
+
+    private final AtomicDouble severity = new AtomicDouble();
 
     private static int getRingDelay()
     {
@@ -900,12 +903,11 @@ public class StorageService extends NotificationBroadcasterSupport implements IE
     /**
      * Gossip about the known severity of the events in this node
      */
-    public synchronized boolean reportSeverity(double incr)
+    public boolean reportSeverity(double incr)
     {
         if (!Gossiper.instance.isEnabled())
             return false;
-        double update = getSeverity(FBUtilities.getBroadcastAddress()) + incr;
-        VersionedValue updated = StorageService.instance.valueFactory.severity(update);
+	VersionedValue updated = StorageService.instance.valueFactory.severity(severity.addAndGet(incr));
         Gossiper.instance.addLocalApplicationState(ApplicationState.SEVERITY, updated);
         return true;
     }
