@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.concurrent.ConcurrentMap;
 
 import org.cliffc.high_scale_lib.NonBlockingHashMap;
@@ -116,7 +118,9 @@ public class StreamInSession extends AbstractStreamSession
         files.remove(remoteFile);
         if (remoteFile.equals(current))
             current = null;
-        StreamReply reply = new StreamReply(remoteFile.getFilename(), getSessionId(), StreamReply.Status.FILE_FINISHED);
+
+        String fname = remoteFile.getFilename().replaceAll(Pattern.quote("/"),Matcher.quoteReplacement("\\"));
+        StreamReply reply = new StreamReply(fname, getSessionId(), StreamReply.Status.FILE_FINISHED);
         // send a StreamStatus message telling the source node it can delete this file
         sendMessage(reply.createMessage());
         logger.debug("ack {} sent for {}", reply, remoteFile);
@@ -132,7 +136,8 @@ public class StreamInSession extends AbstractStreamSession
             close(false);
             return;
         }
-        StreamReply reply = new StreamReply(remoteFile.getFilename(), getSessionId(), StreamReply.Status.FILE_RETRY);
+        String fname = remoteFile.getFilename().replaceAll(Pattern.quote("/"),Matcher.quoteReplacement("\\"));
+        StreamReply reply = new StreamReply(fname, getSessionId(), StreamReply.Status.FILE_RETRY);
         logger.info("Streaming of file {} for {} failed: requesting a retry.", remoteFile, this);
         try
         {
