@@ -857,7 +857,8 @@ public class StorageService extends NotificationBroadcasterSupport implements IE
             logger.info("Startup completed! Now serving reads.");
             assert tokenMetadata.sortedTokens().size() > 0;
 
-            Auth.setup();
+            // setup default superuser (if needed).
+            //Auth.setupSuperuser();
         }
         else
         {
@@ -896,7 +897,8 @@ public class StorageService extends NotificationBroadcasterSupport implements IE
             logger.info("Leaving write survey mode and joining ring at operator request");
             assert tokenMetadata.sortedTokens().size() > 0;
 
-            Auth.setup();
+            // setup default superuser (if needed).
+            //Auth.setupSuperuser();
         }
     }
 
