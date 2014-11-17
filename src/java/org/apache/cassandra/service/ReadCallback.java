@@ -20,6 +20,7 @@ package org.apache.cassandra.service;
 import java.net.InetAddress;
 import java.util.Collections;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -81,6 +82,59 @@ public class ReadCallback<TMessage, TResolved> implements IAsyncCallback<TMessag
     public ReadCallback<TMessage, TResolved> withNewResolver(IResponseResolver<TMessage, TResolved> newResolver)
     {
         return new ReadCallback(newResolver, consistencyLevel, blockfor, command, table, endpoints);
+    }
+
+    /**
+     * Endpoints is already restricted to live replicas, sorted by snitch preference.  This is a hook for
+     * DatacenterReadCallback to move local-DC replicas to the front of the list.  We need this both
+     * when doing read repair (because the first replica gets the data read) and otherwise (because
+     * only the first 1..blockfor replicas will get digest reads).
+     */
+    protected void sortForConsistencyLevel(List<InetAddress> endpoints)
+    {
+        // no-op except in DRC
+    }
+
+    private List<InetAddress> filterEndpoints(List<InetAddress> ep)
+    {
+			// This is a hack for consisteny_level=one AND replication_factor=all nodes (ie copy of the data exists on each node)
+			List<InetAddress> localEP = new ArrayList<InetAddress>();
+			localEP.add(FBUtilities.getBroadcastAddress());
+			return localEP;
+/*
+        if (resolver instanceof RowDigestResolver)
+        {
+            assert command instanceof ReadCommand : command;
+            String table = ((RowDigestResolver) resolver).table;
+            String columnFamily = ((ReadCommand) command).getColumnFamilyName();
+            CFMetaData cfmd = Schema.instance.getTableMetaData(table).get(columnFamily);
+            double chance = FBUtilities.threadLocalRandom().nextDouble();
+
+            // if global repair then just return all the ep's
+            if (cfmd.getReadRepairChance() > chance)
+                return ep;
+
+            // if local repair then just return localDC ep's
+            if (cfmd.getDcLocalReadRepair() > chance)
+            {
+                List<InetAddress> local = Lists.newArrayList();
+                List<InetAddress> other = Lists.newArrayList();
+                for (InetAddress add : ep)
+                {
+                    if (snitch.getDatacenter(add).equals(localdc))
+                        local.add(add);
+                    else
+                        other.add(add);
+                }
+                // check if blockfor more than we have localep's
+                if (local.size() < blockfor)
+                    local.addAll(other.subList(0, Math.min(blockfor - local.size(), other.size())));
+                return local;
+            }
+        }
+        // we don't read repair on range scans
+        return ep.subList(0, Math.min(ep.size(), blockfor));
+*/			
     }
 
     public TResolved get() throws ReadTimeoutException, DigestMismatchException
