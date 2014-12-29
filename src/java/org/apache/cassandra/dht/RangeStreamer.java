@@ -41,6 +41,8 @@ import org.apache.cassandra.locator.TokenMetadata;
 import org.apache.cassandra.streaming.OperationType;
 import org.apache.cassandra.streaming.StreamIn;
 
+import org.apache.cassandra.gms.*;
+
 /**
  * Assists in streaming ranges to a node.
  */
@@ -175,11 +177,31 @@ public class RangeStreamer
     private static Multimap<InetAddress, Range<Token>> getRangeFetchMap(Multimap<Range<Token>, InetAddress> rangesWithSources,
                                                                         Collection<ISourceFilter> sourceFilters)
     {
+		Set<InetAddress> tokenOwners = Gossiper.instance.getLiveTokenOwners();
+        try
+        {
+            // sleep a while to allow gossip to warm up (the other nodes need to know about this one before they can reply).
+            outer:
+            while (true)
+            {
+                Thread.sleep(1000);
+                for (InetAddress address : Gossiper.instance.getLiveMembers())
+                {
+                    if (Gossiper.instance.isFatClient(address)) {
+
+                        break outer;
+					}
+                }
+            }
+        }
+        catch (InterruptedException e)
+        {
+        }
+
         Multimap<InetAddress, Range<Token>> rangeFetchMapMap = HashMultimap.create();
         for (Range<Token> range : rangesWithSources.keySet())
         {
             boolean foundSource = false;
-
             outer:
             for (InetAddress address : rangesWithSources.get(range))
             {
@@ -189,6 +211,11 @@ public class RangeStreamer
                     foundSource = true;
                     continue;
                 }
+
+				if (!tokenOwners.contains(address)) {
+						//ignore dead nodes
+						continue;
+				}
 
                 for (ISourceFilter filter : sourceFilters)
                 {
