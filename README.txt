@@ -3,6 +3,13 @@
 Cassandra is a highly scalable, eventually consistent, distributed, structured 
 key-value store. 
 
+This is a special fork dedicated to running cassandra in tactical environments.
+Tactical environments are special in the following aspects:
+1. bad, unreliable communication. mostly radio based with a lot of noise.
+2. communication topology constantly changes.
+3. a node can find it self out of the network, or on a subset (partition) of the network
+4. high network latencies
+and more.
 
 Project description
 -------------------
